@@ -74,8 +74,9 @@ class PPO(object):
         for (oldv, newv) in zipsame(self.oldpi.get_variables(), self.pi.get_variables())])
 
     def fix_ob2feed(self, ob):
-        if not isinstance(ob, np.ndarray):
-            return zip(*ob.tolist())
+        if ob.shape[-1] == 2:
+            ret = zip(*ob.tolist())
+            return ret
         else:
             return [ob]
 

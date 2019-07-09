@@ -8,7 +8,7 @@ def get_ppo_args_train():
     parser.add_argument("--env_id", default="PipelineTrack-v1", type=str)
     parser.add_argument('--checkpoint_dir', help='the directory to save model', default='/home/uwsim/workspace/results/pipeline_track/checkpoint',type=str)
     parser.add_argument('--log_dir', help='the directory to save plotting data', default='/home/uwsim/workspace/results/pipeline_track/log_dir', type=str) 
-    parser.add_argument('--policy_type', default="dense", type=str)
+    parser.add_argument('--policy_type', default="coord_cnn", type=str)
     parser.add_argument("--timesteps_per_actorbatch", default=256, type=int)
     parser.add_argument('--max_timesteps', default=1e5, type=int)
     parser.add_argument("--save_per_iter", default=100, type=int)

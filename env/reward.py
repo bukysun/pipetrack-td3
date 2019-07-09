@@ -72,7 +72,7 @@ def calc_cenline(lines):
         l2_max_index = np.argmax(l2[:, 0])
         l1_max_rho, l1_max_theta = l1[l1_max_index]
         l2_max_rho, l2_max_theta = l2[l2_max_index]
-        if l1_max_rho + l2_max_rho > 30 and l1_max_rho + l2_max_rho < 60:
+        if l1_max_rho + l2_max_rho > 30 and l1_max_rho + l2_max_rho < 70:
             cenline_rho = abs(l2_max_rho - l1_max_rho) / 2
             #cenline_theta = (l1_max_theta + np.pi + l2_max_theta) / 2
             cenline_theta = l1_max_theta if l1_max_rho > l2_max_rho else l2_max_theta
@@ -80,7 +80,7 @@ def calc_cenline(lines):
         #adjust results after filtering 
         far_index = np.argmax(lines[:, 0])
         near_index = np.argmin(lines[:, 0])
-        if (lines[far_index, 0] - lines[near_index, 0]) > 30 and (lines[far_index, 0] - lines[near_index, 0]) < 60:
+        if (lines[far_index, 0] - lines[near_index, 0]) > 30 and (lines[far_index, 0] - lines[near_index, 0]) < 70:
             cenline_rho = (lines[far_index, 0] + lines[near_index, 0]) / 2
             #cenline_theta = np.mean(lines[:, 1])
             cenline_theta = (lines[far_index, 1] + lines[near_index, 1]) / 2
@@ -180,11 +180,11 @@ def get_reward(img, u):
             #rew = 1 * trav_dist + 10 * perp_dist_penalty 
             #rew = 1.0 * trav_dist/(d * 3 / width + 0.1) + 10 * perp_dist_penalty
             rew = 1.0 * trav_dist
-            return rew, [np.cos(theta), d, rew/u, u]
+            return rew, [np.cos(theta), np.sin(theta), d], [rew/u, u]
         else:
-            return None, None
+            return None, None, None
     except IndexError:
-        return None, None
+        return None, None, None
 
 def get_roi_hsv(img, lower=np.array([60, 43, 46]), upper = np.array([70, 255, 255])):
     # change to hsv space
@@ -197,6 +197,17 @@ def get_roi_hsv(img, lower=np.array([60, 43, 46]), upper = np.array([70, 255, 25
     #mask = cv2.dilate(mask, kernel)
     res = cv2.bitwise_and(img, img, mask=mask)
     return mask, res
+
+
+def get_real_reward(auv_pos, u, pipepos1, pipepos2):
+    d = dist_p2line(auv_pos[:2], pipepos1, pipepos2)
+    psi = auv_pos[-1]
+    psi_v = np.array([np.cos(psi), np.sin(psi)])
+    pipe_v = np.array(pipepos2) - np.array(pipepos1)
+    cos_rho = np.dot(psi_v, pipe_v)/(np.linalg.norm(psi_v)*np.linalg.norm(pipe_v)) 
+    trav_dist = -u * abs(cos_rho)
+    rew = 1.0 * trav_dist
+    return rew, d
 
 
 

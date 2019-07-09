@@ -1,0 +1,32 @@
+Starting UWSim...
+Loading SimulatedDevices plugin: 'DredgeTool_Factory'
+Loading SimulatedDevices plugin: 'ForceSensor_Factory'
+Loading SimulatedDevices plugin: 'SimDev_Echo_Factory'
+  . Setting localized world: 3.7e-05s
+Loading URDF robot... 
+  · robot/GIRONA500/g500_March11.osg: 1.34486s
+  · Linking links...Robot successfully loaded. Total time: 0.006891s
+1.35181s
+Loading URDF robot... 
+  · objects/dot.3ds: 0.005219s
+  · Linking links...Robot successfully loaded. Total time: 0.000798s
+0.006041s
+No protocol specified
+No protocol specified
+/home/uwsim/.local/lib/python2.7/site-packages/torch/nn/_reduction.py:46: UserWarning: size_average and reduce args will be deprecated, please use reduction='none' instead.
+  warnings.warn(warning.format(ret))
+Exception in thread Thread-5:
+Traceback (most recent call last):
+  File "/usr/lib/python2.7/threading.py", line 801, in __bootstrap_inner
+    self.run()
+  File "/opt/ros/kinetic/lib/python2.7/dist-packages/rospy/timer.py", line 235, in run
+    self._callback(TimerEvent(last_expected, last_real, current_expected, current_real, last_duration))
+  File "/home/uwsim/uwsim_ws/install_isolated/lib/underwater_vehicle_dynamics/dynamics.py", line 258, in pubV
+    self.pub_v.publish(twist)
+  File "/opt/ros/kinetic/lib/python2.7/dist-packages/rospy/topics.py", line 882, in publish
+    self.impl.publish(data)
+  File "/opt/ros/kinetic/lib/python2.7/dist-packages/rospy/topics.py", line 1041, in publish
+    raise ROSException("publish() to a closed topic")
+ROSException: publish() to a closed topic
+
+/home/uwsim/uwsim_ws/install_isolated/lib/uwsim/uwsim: 行 23:  3273 已杀死               rosrun uwsim uwsim_binary --dataPath ~/.uwsim/data $@

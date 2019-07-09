@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import math
 import random
@@ -16,8 +17,8 @@ from std_msgs.msg import Int8
 
 import ros_utils as sensors
 
-from reward import cenline_extract, get_reward 
-from env.config import pipeline_points
+from config import init_pos_set, map_tiles
+import pickle
 
 
 class AuvUwsim(object):
@@ -34,19 +35,15 @@ class AuvUwsim(object):
         self.reset_pub = rospy.Publisher("/vehicle1/resetdata",Odometry ,queue_size=1)
         self.pause_pub = rospy.Publisher("/pause",Int8,queue_size=1)
 
-        # Initial point set
-        #init_pos = []
-        #for ps in pipeline_points:
-        #    for p in ps:
-        #        init_pos.append(p)
-        #self.init_pos = init_pos
-        self.init_pos = pipeline_points[0]
-         
-
+        # set initial variable
+        self.init_pos_set = init_pos_set
+        self.init_state = [0, 0, 7.4, 0, 0, 1.57, 0, 0.0,0.0,0.0,0.0,0.0]
+        self.map_tiles = map_tiles   
     
     def state2msg(self, state):
         # convert state into a msg passed to set the vehicle
         x, y, z, phi, theta, psi, u, v, w, p, q, r = self.state
+        #psi = -psi - np.pi/2
         
         msg = Odometry()
         msg.pose.pose.position.x = x
@@ -68,30 +65,18 @@ class AuvUwsim(object):
     def action2msg(self, action):
         tau1, tau2 = action
         msg = Float64MultiArray()
-        msg.data = [tau1, tau2, 0, 0, 0]
+        msg.data = [-tau1, -tau2, 0, 0, 0]
         return msg
-
 
     def get_retstate(self, state):
         x, y, z, phi, theta, psi, u, v, w, p, q, r = self.state
         return [x, y, psi, u, v, r]
     
-    def reset_sim(self, init_state = [-1.12,-3.6, 7.4,0,0, 1.27 ,0, 0.0,0.0,0.0,0.0,0.0]):
-        self.state = init_state
-        #self.state[5] = -np.arctan(1.8/0.56)
-        self.state[5] = -0.3 - np.pi / 2
-        rand_delta_ang = (random.random() * 2 - 1) * np.pi / 6
-        self.state[5] += rand_delta_ang
-        print("start at direction angle %f deg"%(self.state[5]/np.pi * 180))
-        #self.state[:2] = random.choice(self.init_pos)
-        
-        
-        #initialize flag variables
-        self.step = 0
-        self.last_rew = None
-        self.last_feat = None
-        self.failed_steps = 0
-        
+
+    def reset_sim(self):
+        self.state = self.init_state
+        # sample random initial position
+        #self.state[0], self.state[1], pipe_dir = self.init_pos_set[random.randint(0, len(self.init_pos_set)-1)]          
         #set initial state
         msg = self.state2msg(self.state)
         self.reset_pub.publish(msg)
@@ -102,12 +87,31 @@ class AuvUwsim(object):
         self.pause_pub.publish(flag)
 
         ret_state = np.array(self.get_retstate(self.state))
+        #ret_state = np.concatenate([ret_state, self.ang_enc], axis=-1)
         
         img = copy.deepcopy(self.IG.cv_image)
-        u = self.state[6]
-        _, feat = get_reward(img, u)
+        
+        return ret_state, self.IG.cv_image, {}
 
-        return ret_state, self.IG.cv_image, feat
+    def read_state(self):
+        p = self.State_p.p
+        v = self.State_v.v
+        #p[-1] = -p[-1] - np.pi/2
+        return np.append(p, v)
+
+    def compute_reward(self, pos, heading, u):
+        out_of_driving = True
+        for t in self.map_tiles:
+            if t.is_in(pos):
+                out_of_driving = False
+                dist, ang = t.get_pos_lane(pos, heading)
+                reward = u * np.cos(ang) - 5.0 * abs(dist)
+                break
+        if out_of_driving:
+            reward = -1000
+        
+        return reward, out_of_driving
+        
 
     def frame_step(self, action):
         #publish action
@@ -118,41 +122,15 @@ class AuvUwsim(object):
         rospy.sleep(0.1)
 
         #subscribe new state
-        self.state = np.append(self.State_p.p, self.State_v.v)
-
+        self.state = self.read_state()
         # get reward
         img = copy.deepcopy(self.IG.cv_image)
-        u = self.state[6]
-        rew, feat = get_reward(img, u)
-
-        done = False
-        if rew is None or feat is None:
-            rew = 0
-            done = True
-
-
-        # process None feat
-        #if feat is None:
-        #    if self.last_feat is not None:
-        #        feat = self.last_feat
-        #else:
-        #    self.last_feat = feat
+        pos, heading, u = self.state[:2], self.state[5], self.state[6]
         
-        # process the None reward
-        #if rew is None:
-        #    rew = 0
-        #    self.failed_steps += 1
-        #else:
-        #    self.failed_steps = 0
-
-        # judge end condition: fail_step > 5
-        #done = False
-        #if self.failed_steps > 5:   # if rew cannot be continuously detected by 5 times, end the episode.
-        #    done = True 
-        
+        reward, done = self.compute_reward(self.state[:2], heading, u)
+                
         ret_state = self.get_retstate(self.state)
         
-        self.step += 1
-        return ret_state, img, rew, done, feat
+        return ret_state, img, reward, done, {}
 
 

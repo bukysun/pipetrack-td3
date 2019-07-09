@@ -14,6 +14,7 @@ from mpi4py import MPI
 import numpy as np
 import time
 from statistics import stats
+import shutil
 
 policy_name = "ppo"
 
@@ -21,7 +22,7 @@ os.environ['SDL_VIDEO_WINDOW_POS'] = "%d, %d" %(500, 70)
 args = get_ppo_args_train()
 
 #launch ros node
-launch = launch_from_py("auv", "/home/uwsim/uwsim_ws/install_isolated/share/RL/launch/basic.launch")
+launch = launch_from_py("auv", "/home/uwsim/uwsim_ws/install_isolated/share/RL/launch/turns.launch")
 launch.start()
 rospy.loginfo("auv started!")
 rospy.sleep(10)
@@ -39,7 +40,7 @@ task_name = "{}.{}.{}.{}".format(
 
 tensorboard_dir = osp.join(args.log_dir, task_name)
 if os.path.exists(tensorboard_dir):
-    os.removedirs(tensorboard_dir)
+    shutil.rmtree(tensorboard_dir)
 ckpt_dir = osp.join(args.checkpoint_dir, task_name)
 
 
