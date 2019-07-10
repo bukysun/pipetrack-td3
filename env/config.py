@@ -18,6 +18,8 @@ class Tile(object):
     def __init__(self, kind, coord):
         self.kind = kind
         self.coord = coord
+        self.pipe_len, self.pipe_wid = 1.0, 0.5
+        self.radius = 0.28
  
     def is_in(self, position):
         x1, y1 = position
@@ -25,27 +27,62 @@ class Tile(object):
             x0, y0, theta0 = self.coord
         else:
             x0, y0, stheta0, etheta0 = self.coord
-        pipe_len, pipe_wid = 1.0, 0.5
 
         if self.kind == "straight":
             if abs(theta0) < 1e-5:
-                if abs(x1-x0) <= pipe_len and abs(y1-y0) <= pipe_wid:
+                if abs(x1-x0) <= self.pipe_len and abs(y1-y0) <= self.pipe_wid:
                     return True
             else:
-                if abs(x1-x0) <= pipe_wid and abs(y1-y0) <= pipe_len:
+                if abs(x1-x0) <= self.pipe_wid and abs(y1-y0) <= self.pipe_len:
                     return True
         elif self.kind == "turn":
-            radius = 0.28
             dvec = [x1-x0, y1-y0]
             ang = math.atan2(dvec[1], dvec[0])
             if ang < 0: ang += 2 * np.pi 
             dist = np.linalg.norm(dvec)
-            if dist < radius + pipe_wid and ang >=stheta0 and ang < etheta0:
+            if dist <= self.radius + self.pipe_wid and ang >=stheta0 and ang < etheta0:
                 return True
         return False
+    
+    def get_start_pos(self): 
+        # generate pos
+        if len(self.coord) == 3:
+            x0, y0, theta0 = self.coord
+        else:
+            x0, y0, stheta0, etheta0 = self.coord
+
+        if self.kind == "straight":
+            if abs(theta0) < 1e-5:
+                xmin, xmax = x0 - self.pipe_len, x0 + self.pipe_len
+                ymin, ymax = y0 - self.pipe_wid, y0 + self.pipe_wid
+            else:
+                xmin, xmax = x0 - self.pipe_wid, x0 + self.pipe_wid
+                ymin, ymax = y0 - self.pipe_len, y0 + self.pipe_len
+            while True:
+                x = np.random.rand() * (xmax-xmin) + xmin
+                y = np.random.rand() * (ymax-ymin) + ymin
+                if self.is_in([x,y]):
+                    break
+        elif self.kind == "turn":
+            while True:
+                the = np.random.rand() * (etheta0-stheta0) + stheta0
+                r = np.random.rand() * (self.radius + self.pipe_wid)
+                x = x0 + r * np.cos(the)
+                y = y0 + r * np.sin(the)
+                if self.is_in([x, y]):
+                    break
+        else:
+            raise NotImplementedError
+        # generate heading direction
+        while True:
+            heading = np.random.rand() * 2 * np.pi
+            dist, ang = self.get_pos_lane([x, y], heading)
+            if abs(ang) < np.pi/6:
+                break
+        return [x, y], heading
 
     def get_pos_lane(self, pos, ang1):
-        x1, y1 = pos
+        x1, y1 = pos 
         if len(self.coord) == 3:
             x0, y0, theta0 = self.coord
         else:
@@ -60,13 +97,12 @@ class Tile(object):
             ang = min(ang, abs(np.pi-ang))
             return dist, ang
         elif self.kind == "turn":
-            radius = 0.28
             dvec = [x1-x0, y1-y0]
             ang = math.atan2(dvec[1], dvec[0]) + np.pi/2
             ang = ang - ang1
             ang = abs(math.atan2(math.sin(ang), math.cos(ang)))
             ang = min(ang, abs(np.pi-ang))
-            dist = abs(np.linalg.norm(dvec) - radius)
+            dist = abs(np.linalg.norm(dvec) - self.radius)
             return dist, ang 
         else:
             raise NotImplementedError

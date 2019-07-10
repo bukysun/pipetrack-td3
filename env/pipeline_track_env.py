@@ -45,15 +45,18 @@ if __name__ == "__main__":
     rospy.sleep(10)
     
     env = PipelineTrackEnv()
-    for i in range(10):
+    for i in range(100):
         time.sleep(0.1)
+        print "start reset {}".format(i)
         s = env.reset()
+        print "end reset {}".format(i)
         time.sleep(0.1)
         done = False
         while not done:
             a = [0.5, 0.5]
             s, reward, done, _ = env.step(a)
-            print s.shape
+            print reward
+    launch.shutdown()
 
 
 

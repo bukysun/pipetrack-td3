@@ -71,12 +71,18 @@ class AuvUwsim(object):
     def get_retstate(self, state):
         x, y, z, phi, theta, psi, u, v, w, p, q, r = self.state
         return [x, y, psi, u, v, r]
-    
+   
+    def generate_init_state(self):
+        t_i = np.random.randint(0, len(self.map_tiles)) 
+        t = self.map_tiles[-t_i]
+        pos, heading = t.get_start_pos()
+        return pos, heading
+
 
     def reset_sim(self):
-        self.state = self.init_state
-        # sample random initial position
-        #self.state[0], self.state[1], pipe_dir = self.init_pos_set[random.randint(0, len(self.init_pos_set)-1)]          
+        self.state = [0.0] * 12
+        pos, heading = self.generate_init_state()
+        self.state[:2], self.state[5] = pos, heading
         #set initial state
         msg = self.state2msg(self.state)
         self.reset_pub.publish(msg)
@@ -105,7 +111,7 @@ class AuvUwsim(object):
             if t.is_in(pos):
                 out_of_driving = False
                 dist, ang = t.get_pos_lane(pos, heading)
-                reward = u * np.cos(ang) - 5.0 * abs(dist)
+                reward = u * np.cos(ang) - 2.0 * abs(dist)
                 break
         if out_of_driving:
             reward = -1000
